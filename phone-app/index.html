@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Даяана</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#111111">
+<style>
+  body { background:#111; color:#eee; font-family:sans-serif; margin:0; padding:20px; }
+  #login { max-width:320px; margin:60px auto; text-align:center; }
+  #login input { width:100%; padding:12px; margin:8px 0; border-radius:8px; border:none; box-sizing:border-box; }
+  #login button { width:100%; padding:12px; border-radius:8px; border:none; background:#2a5; color:#fff; font-size:16px; }
+  #loginError { color:#f66; margin-top:10px; font-size:14px; }
+  #chat { max-width:600px; margin:0 auto 90px; }
+  .msg { padding:10px 14px; border-radius:10px; margin:8px 0; max-width:80%; }
+  .user { background:#2a5; margin-left:auto; }
+  .bot { background:#333; }
+  #row { display:flex; position:fixed; bottom:0; left:0; right:0; padding:15px; background:#111; }
+  #input { flex:1; padding:12px; border-radius:8px; border:none; }
+  #send { padding:12px 20px; margin-left:8px; border:none; border-radius:8px; background:#2a5; color:#fff; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h2>Даяана</h2>
+  <input id="email" placeholder="Email" autocomplete="username">
+  <input id="password" type="password" placeholder="Пароль" autocomplete="current-password">
+  <button id="loginBtn">Войти как я</button>
+  <button id="guestBtn" style="background:#555;margin-top:10px">Продолжить как гость</button>
+  <div id="loginError"></div>
+</div>
+
+<div id="chatScreen" style="display:none">
+  <div id="chat"></div>
+  <div id="row">
+    <input id="input" placeholder="Напиши сообщение...">
+    <button id="send">➤</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDQUcTOwjiq_OSsQoEFHK95sbkTm5O-4NU",
+    authDomain: "dayana-assistant.firebaseapp.com",
+    projectId: "dayana-assistant",
+    storageBucket: "dayana-assistant.firebasestorage.app",
+    messagingSenderId: "877713572166",
+    appId: "1:877713572166:web:13bc5905d5045aeea0e547",
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const loginEl = document.getElementById("login");
+  const chatScreenEl = document.getElementById("chatScreen");
+  const chatEl = document.getElementById("chat");
+  const inputEl = document.getElementById("input");
+
+    let isGuest = false;
+
+  document.getElementById("loginBtn").onclick = async () => {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    try {
+      isGuest = false;
+      await auth.signInWithEmailAndPassword(email, password);
+    } catch (e) {
+      document.getElementById("loginError").textContent = "Ошибка входа: " + e.message;
+    }
+  };
+
+  document.getElementById("guestBtn").onclick = async () => {
+    try {
+      isGuest = true;
+      await auth.signInAnonymously();
+    } catch (e) {
+      document.getElementById("loginError").textContent = "Ошибка: " + e.message;
+    }
+  };
+
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      loginEl.style.display = "none";
+      chatScreenEl.style.display = "block";
+      if (user.isAnonymous) {
+        listenGuestMessages(user.uid);
+      } else {
+        listenMessages();
+      }
+    } else {
+      loginEl.style.display = "block";
+      chatScreenEl.style.display = "none";
+    }
+  });
+
+  function addMsg(text, who) {
+    const div = document.createElement("div");
+    div.className = "msg " + who;
+    div.textContent = text;
+    chatEl.appendChild(div);
+    div.scrollIntoView();
+  }
+
+    function listenMessages() {
+    db.collection("messages").orderBy("createdAt").onSnapshot((snap) => {
+      chatEl.innerHTML = "";
+      snap.forEach((doc) => {
+        const d = doc.data();
+        addMsg(d.text, d.role === "user" ? "user" : "bot");
+      });
+    });
+  }
+
+  function listenGuestMessages(uid) {
+    db.collection("guestMessages").where("uid", "==", uid).orderBy("createdAt").onSnapshot((snap) => {
+      chatEl.innerHTML = "";
+      snap.forEach((doc) => {
+        const d = doc.data();
+        addMsg(d.text, d.role === "user" ? "user" : "bot");
+      });
+    });
+  }
+
+  function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    inputEl.value = "";
+
+    if (isGuest) {
+      db.collection("guestMessages").add({
+        uid: auth.currentUser.uid,
+        role: "user",
+        text,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    } else {
+      db.collection("messages").add({
+        role: "user",
+        mode: "owner",
+        text,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  document.getElementById("send").onclick = sendMessage;
+  inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+</script>
+</body>
+</html>

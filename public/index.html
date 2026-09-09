@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Даяана</title>
+<style>
+  body { background:#111; color:#eee; font-family:sans-serif; margin:0; padding:20px; }
+  #chat { max-width:600px; margin:0 auto; }
+  .msg { padding:10px 14px; border-radius:10px; margin:8px 0; max-width:80%; }
+  .user { background:#2a5; margin-left:auto; }
+  .bot { background:#333; }
+  #row { display:flex; max-width:600px; margin:20px auto; align-items:center; }
+  #input { flex:1; padding:10px; border-radius:8px; border:none; }
+  #send { padding:10px 20px; margin-left:8px; border:none; border-radius:8px; background:#2a5; color:#fff; cursor:pointer; }
+  #mic { padding:10px 16px; margin-left:8px; border:none; border-radius:8px; background:#555; color:#fff; cursor:pointer; }
+  #mic.on { background:#c33; }
+  #status { text-align:center; color:#888; margin-top:10px; font-size:14px; }
+</style>
+</head>
+<body>
+<h2 style="text-align:center">Даяана</h2>
+<div id="chat"></div>
+<div id="row">
+  <input id="input" placeholder="Напиши сообщение..." autofocus>
+  <button id="send">Отправить</button>
+  <button id="mic">🎤 Голос</button>
+</div>
+<div id="status">Голос выключен</div>
+<script>
+  const ws = new WebSocket("ws://localhost:3001");
+  const chat = document.getElementById("chat");
+  const input = document.getElementById("input");
+  const micBtn = document.getElementById("mic");
+  const statusEl = document.getElementById("status");
+
+  function addMsg(text, who) {
+    const div = document.createElement("div");
+    div.className = "msg " + who;
+    div.textContent = text;
+    chat.appendChild(div);
+    div.scrollIntoView();
+  }
+
+    ws.onmessage = (event) => {
+    addMsg(event.data, "bot");
+    speak(event.data);
+  };
+
+  function sendText(text, viaVoice) {
+    if (!text) return;
+    lastWasVoice = viaVoice;
+    addMsg(text, "user");
+    ws.send(text);
+  }
+
+  document.getElementById("send").onclick = () => {
+    const text = input.value.trim();
+    input.value = "";
+    sendText(text, false);
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("send").click();
+  });
+
+  function speak(text) {
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "ru-RU";
+  const voices = speechSynthesis.getVoices();
+  const ruVoice = voices.find((v) => v.lang.startsWith("ru"));
+  if (ruVoice) utter.voice = ruVoice;
+  speechSynthesis.speak(utter);
+}
+
+  let recognizing = false;
+  let recognition = null;
+  let lastTriggerTime = 0;
+
+  function setupRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      statusEl.textContent = "Браузер не поддерживает распознавание речи (используй Chrome)";
+      micBtn.disabled = true;
+      return null;
+    }
+    const rec = new SpeechRecognition();
+    rec.lang = "ru-RU";
+    rec.continuous = true;
+    rec.interimResults = false;
+
+    let lastTriggerTime = 0;
+
+    rec.onresult = (event) => {
+      const last = event.results[event.results.length - 1];
+      if (!last.isFinal) return;
+
+      const now = Date.now();
+      if (now - lastTriggerTime < 1500) return;
+      lastTriggerTime = now;
+
+      const transcript = last[0].transcript.trim();
+      console.log("Услышано:", transcript);
+
+      const lower = transcript.toLowerCase();
+      const wakeWords = ["даяана", "дайана", "даяна"];
+      const found = wakeWords.find((w) => lower.includes(w));
+
+      if (found) {
+        const idx = lower.indexOf(found);
+        const afterWake = transcript.slice(idx + found.length).trim().replace(/^[,.\s]+/, "");
+        if (afterWake) {
+          sendText(afterWake, true);
+        } else {
+          addMsg("Слушаю...", "bot");
+          speak("Слушаю");
+        }
+      }
+    };
+
+    rec.onerror = (e) => console.error("Ошибка распознавания:", e.error);
+
+    rec.onend = () => {
+      if (recognizing) rec.start();
+    };
+
+    return rec;
+  }
+
+    micBtn.onclick = () => {
+    if (!recognition) recognition = setupRecognition();
+    if (!recognition) return;
+
+    recognizing = !recognizing;
+    if (recognizing) {
+      recognition.start();
+      micBtn.classList.add("on");
+      statusEl.textContent = 'Слушаю... (скажи "Даяана" перед командой)';
+      addMsg("Слушаю", "bot");
+      speak("Слушаю");
+    } else {
+      recognition.stop();
+      micBtn.classList.remove("on");
+      statusEl.textContent = "Голос выключен";
+    }
+  };
+</script>
+</body>
+</html>
