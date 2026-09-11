@@ -2,3 +2,5 @@ node_modules/
 .env
 serviceAccountKey.json.json
 firebase-debug.log
+public/firebase-config.js
+phone-app/firebase-config.js

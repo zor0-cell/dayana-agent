@@ -367,15 +367,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+<!-- Ключи вынесены в firebase-config.js (добавлен в .gitignore) -->
+<script src="/firebase-config.js"></script>
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyDQUcTOwjiq_OSsQoEFHK95sbkTm5O-4NU",
-    authDomain: "dayana-assistant.firebaseapp.com",
-    projectId: "dayana-assistant",
-    storageBucket: "dayana-assistant.firebasestorage.app",
-    messagingSenderId: "877713572166",
-    appId: "1:877713572166:web:13bc5905d5045aeea0e547",
-  };
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
