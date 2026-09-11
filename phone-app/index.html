@@ -5,44 +5,368 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Даяана</title>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#111111">
+<meta name="theme-color" content="#7c3aed">
+<link rel="icon" href="/icon.png">
 <style>
-  body { background:#111; color:#eee; font-family:sans-serif; margin:0; padding:20px; }
-  #login { max-width:320px; margin:60px auto; text-align:center; }
-  #login input { width:100%; padding:12px; margin:8px 0; border-radius:8px; border:none; box-sizing:border-box; }
-  #login button { width:100%; padding:12px; border-radius:8px; border:none; background:#2a5; color:#fff; font-size:16px; }
-  #loginError { color:#f66; margin-top:10px; font-size:14px; }
-  #chat { max-width:600px; margin:0 auto 90px; }
-  .msg { padding:10px 14px; border-radius:10px; margin:8px 0; max-width:80%; }
-  .user { background:#2a5; margin-left:auto; }
-  .bot { background:#333; }
-  #row { display:flex; position:fixed; bottom:0; left:0; right:0; padding:15px; background:#111; }
-  #input { flex:1; padding:12px; border-radius:8px; border:none; }
-  #send { padding:12px 20px; margin-left:8px; border:none; border-radius:8px; background:#2a5; color:#fff; }
+  :root {
+    --bg: #0d0d14;
+    --surface: #16161f;
+    --surface2: #1e1e2e;
+    --accent: #7c3aed;
+    --accent2: #a855f7;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --user-bg: linear-gradient(135deg, #7c3aed, #a855f7);
+    --bot-bg: #1e1e2e;
+    --border: #2d2d3d;
+    --radius: 18px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ---- Экран входа ---- */
+  #login {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    gap: 16px;
+  }
+
+  .logo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 8px;
+    box-shadow: 0 0 40px rgba(124, 58, 237, 0.5);
+  }
+
+  .logo-title {
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+  }
+
+  .logo-sub {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .form-group {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 16px;
+    margin-bottom: 10px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-group input:focus {
+    border-color: var(--accent);
+  }
+
+  .btn {
+    width: 100%;
+    max-width: 320px;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: white;
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    margin-top: 8px;
+  }
+
+  #loginError { color: #f87171; font-size: 13px; text-align: center; }
+
+  /* ---- Чат ---- */
+  #chatScreen {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    height: 100dvh;
+  }
+
+  .chat-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .header-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    box-shadow: 0 0 16px rgba(124, 58, 237, 0.4);
+  }
+
+  .header-title {
+    font-size: 17px;
+    font-weight: 700;
+    flex: 1;
+  }
+
+  .model-badge {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(124, 58, 237, 0.2);
+    color: var(--accent2);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .model-badge:active { opacity: 0.7; }
+
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scroll-behavior: smooth;
+  }
+
+  /* scrollbar */
+  #chat::-webkit-scrollbar { width: 4px; }
+  #chat::-webkit-scrollbar-track { background: transparent; }
+  #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .msg {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 15px;
+    line-height: 1.5;
+    word-break: break-word;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .user {
+    background: var(--user-bg);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+
+  .bot {
+    background: var(--bot-bg);
+    color: var(--text);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .typing {
+    background: var(--bot-bg);
+    border: 1px solid var(--border);
+    align-self: flex-start;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    border-bottom-left-radius: 4px;
+  }
+
+  .typing span {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background: var(--accent2);
+    border-radius: 50%;
+    margin: 0 2px;
+    animation: bounce 1.2s infinite;
+  }
+
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  /* ---- Ввод ---- */
+  #inputArea {
+    padding: 12px 12px 20px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  #input {
+    flex: 1;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    resize: none;
+    max-height: 120px;
+    transition: border-color 0.2s;
+    line-height: 1.4;
+  }
+
+  #input:focus { border-color: var(--accent); }
+
+  #send {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.1s;
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+  }
+
+  #send:active { transform: scale(0.9); }
+
+  /* ---- Выбор модели (попап) ---- */
+  #modelPopup {
+    display: none;
+    position: fixed;
+    bottom: 90px;
+    right: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 8px;
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    min-width: 180px;
+  }
+
+  .model-option {
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+
+  .model-option:hover, .model-option.active {
+    background: rgba(124, 58, 237, 0.2);
+    color: var(--accent2);
+  }
+
+  /* ---- Состояние оффлайн ---- */
+  .offline-bar {
+    background: #dc2626;
+    color: white;
+    text-align: center;
+    font-size: 13px;
+    padding: 6px;
+    display: none;
+  }
 </style>
 </head>
 <body>
 
+<!-- Экран входа -->
 <div id="login">
-  <h2>Даяана</h2>
-  <input id="email" placeholder="Email" autocomplete="username">
-  <input id="password" type="password" placeholder="Пароль" autocomplete="current-password">
-  <button id="loginBtn">Войти как я</button>
-  <button id="guestBtn" style="background:#555;margin-top:10px">Продолжить как гость</button>
+  <img class="logo" src="/icon.png" alt="Даяана">
+  <div class="logo-title">Даяана</div>
+  <div class="logo-sub">Твой личный ИИ-ассистент</div>
+  <div class="form-group">
+    <input id="email" type="email" placeholder="Email" autocomplete="username">
+    <input id="password" type="password" placeholder="Пароль" autocomplete="current-password">
+  </div>
+  <button class="btn btn-primary" id="loginBtn">Войти</button>
+  <button class="btn btn-secondary" id="guestBtn">Продолжить как гость</button>
   <div id="loginError"></div>
 </div>
 
-<div id="chatScreen" style="display:none">
+<!-- Экран чата -->
+<div id="chatScreen">
+  <div class="offline-bar" id="offlineBar">⚡ Нет соединения</div>
+  <div class="chat-header">
+    <img class="header-logo" src="/icon.png" alt="">
+    <div class="header-title">Даяана</div>
+    <div class="model-badge" id="modelBadge" title="Нажми для смены модели">✨ Gemini</div>
+  </div>
+
   <div id="chat"></div>
-  <div id="row">
-    <input id="input" placeholder="Напиши сообщение...">
+
+  <div id="inputArea">
+    <textarea id="input" placeholder="Напиши Даяане..." rows="1"></textarea>
     <button id="send">➤</button>
   </div>
+</div>
+
+<!-- Попап выбора модели -->
+<div id="modelPopup">
+  <div class="model-option active" data-model="gemini">✨ Gemini (Google)</div>
+  <div class="model-option" data-model="claude">🤖 Claude (Anthropic)</div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyDQUcTOwjiq_OSsQoEFHK95sbkTm5O-4NU",
@@ -55,14 +379,26 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
+  const messaging = firebase.messaging();
 
+  // ---- Переменные состояния ----
+  let isGuest = false;
+  let currentModel = "gemini";
+  let typingEl = null;
+
+  // ---- Элементы ----
   const loginEl = document.getElementById("login");
   const chatScreenEl = document.getElementById("chatScreen");
   const chatEl = document.getElementById("chat");
   const inputEl = document.getElementById("input");
+  const modelBadge = document.getElementById("modelBadge");
+  const modelPopup = document.getElementById("modelPopup");
 
-    let isGuest = false;
+  // ---- Онлайн/оффлайн ----
+  window.addEventListener("online", () => document.getElementById("offlineBar").style.display = "none");
+  window.addEventListener("offline", () => document.getElementById("offlineBar").style.display = "block");
 
+  // ---- Авторизация ----
   document.getElementById("loginBtn").onclick = async () => {
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
@@ -86,33 +422,62 @@
   auth.onAuthStateChanged((user) => {
     if (user) {
       loginEl.style.display = "none";
-      chatScreenEl.style.display = "block";
+      chatScreenEl.style.display = "flex";
       if (user.isAnonymous) {
         listenGuestMessages(user.uid);
       } else {
         listenMessages();
+        setupPush();
+        listenModel();
       }
     } else {
-      loginEl.style.display = "block";
+      loginEl.style.display = "flex";
       chatScreenEl.style.display = "none";
     }
   });
 
+  // ---- Сообщения ----
   function addMsg(text, who) {
+    removeTyping();
     const div = document.createElement("div");
     div.className = "msg " + who;
     div.textContent = text;
     chatEl.appendChild(div);
-    div.scrollIntoView();
+    chatEl.scrollTop = chatEl.scrollHeight;
   }
 
-    function listenMessages() {
+  function showTyping() {
+    removeTyping();
+    typingEl = document.createElement("div");
+    typingEl.className = "typing";
+    typingEl.innerHTML = "<span></span><span></span><span></span>";
+    chatEl.appendChild(typingEl);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  function removeTyping() {
+    if (typingEl) { typingEl.remove(); typingEl = null; }
+  }
+
+  let lastCount = 0;
+  function listenMessages() {
     db.collection("messages").orderBy("createdAt").onSnapshot((snap) => {
-      chatEl.innerHTML = "";
-      snap.forEach((doc) => {
-        const d = doc.data();
-        addMsg(d.text, d.role === "user" ? "user" : "bot");
-      });
+      if (snap.size > lastCount && lastCount > 0) {
+        // новое сообщение
+        const newDocs = snap.docs.slice(lastCount);
+        newDocs.forEach((doc) => {
+          const d = doc.data();
+          addMsg(d.text, d.role === "user" ? "user" : "bot");
+        });
+      } else if (snap.size !== lastCount) {
+        // первая загрузка
+        chatEl.innerHTML = "";
+        snap.forEach((doc) => {
+          const d = doc.data();
+          addMsg(d.text, d.role === "user" ? "user" : "bot");
+        });
+      }
+      lastCount = snap.size;
     });
   }
 
@@ -126,10 +491,14 @@
     });
   }
 
+  // ---- Отправка ----
   function sendMessage() {
     const text = inputEl.value.trim();
     if (!text) return;
     inputEl.value = "";
+    inputEl.style.height = "auto";
+    addMsg(text, "user");
+    showTyping();
 
     if (isGuest) {
       db.collection("guestMessages").add({
@@ -149,7 +518,108 @@
   }
 
   document.getElementById("send").onclick = sendMessage;
-  inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+
+  // Auto-resize textarea
+  inputEl.addEventListener("input", () => {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+  });
+
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // ---- Переключатель модели ----
+  modelBadge.onclick = (e) => {
+    e.stopPropagation();
+    modelPopup.style.display = modelPopup.style.display === "block" ? "none" : "block";
+  };
+
+  document.addEventListener("click", () => { modelPopup.style.display = "none"; });
+
+  modelPopup.querySelectorAll(".model-option").forEach((opt) => {
+    opt.onclick = async (e) => {
+      e.stopPropagation();
+      const model = opt.dataset.model;
+      currentModel = model;
+
+      // Обновить badge
+      modelBadge.textContent = model === "claude" ? "🤖 Claude" : "✨ Gemini";
+
+      // Убрать active со всех
+      modelPopup.querySelectorAll(".model-option").forEach(o => o.classList.remove("active"));
+      opt.classList.add("active");
+      modelPopup.style.display = "none";
+
+      // Сохранить в Firestore (агент применит)
+      await db.collection("settings").doc("model").set({ active: model });
+
+      addMsg(`🤖 Переключилась на ${model === "claude" ? "Claude" : "Gemini"}!`, "bot");
+    };
+  });
+
+  // Слушать текущую модель из Firestore
+  function listenModel() {
+    db.collection("settings").doc("model").onSnapshot((snap) => {
+      if (snap.exists) {
+        const m = snap.data().active;
+        if (m) {
+          currentModel = m;
+          modelBadge.textContent = m === "claude" ? "🤖 Claude" : "✨ Gemini";
+          modelPopup.querySelectorAll(".model-option").forEach(o => {
+            o.classList.toggle("active", o.dataset.model === m);
+          });
+        }
+      }
+    });
+  }
+
+  // ---- Push-уведомления ----
+  async function setupPush() {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+
+    try {
+      // Регистрируем service worker
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      console.log("Service Worker зарегистрирован");
+
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        console.log("Уведомления отклонены");
+        return;
+      }
+
+      // VAPID ключ (нужно заменить на реальный из Firebase Console)
+      // Settings -> Cloud Messaging -> Web Push certificates -> Key pair
+      const VAPID_KEY = "ЗАМЕНИ_НА_СВОЙ_VAPID_КЛЮЧ";
+
+      const token = await messaging.getToken({
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: reg,
+      });
+
+      if (token) {
+        // Сохранить токен в Firestore
+        await db.collection("fcmTokens").doc(auth.currentUser.uid).set({
+          token,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        console.log("FCM токен сохранён");
+      }
+    } catch (err) {
+      console.warn("Push setup:", err.message);
+    }
+  }
+
+  // Получать foreground push
+  messaging.onMessage((payload) => {
+    console.log("Foreground push:", payload);
+    const body = payload.notification?.body || "";
+    if (body) addMsg(body, "bot");
+  });
 </script>
 </body>
 </html>
